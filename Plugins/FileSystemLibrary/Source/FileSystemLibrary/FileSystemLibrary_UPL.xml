@@ -1,0 +1,146 @@
+<root xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- This imports required packages in the Android Activity -->
+    <gameActivityImportAdditions>
+        <insert>
+            import android.app.Activity;
+            import android.content.ClipData;
+            import android.content.Intent;
+            import android.net.Uri;
+            import android.provider.DocumentsContract;
+            import java.util.ArrayList;
+            import android.provider.MediaStore;
+            import android.database.Cursor;
+            import android.os.Environment;
+            import android.content.ContentUris;
+
+
+        </insert>
+    </gameActivityImportAdditions>
+
+    <!-- This adds required functionality in the Android Activity -->
+    <gameActivityClassAdditions>
+        <insert>
+            <![CDATA[
+              private static final int REQUEST_CODE_FILE_SINGLE = 145;
+              private static final int REQUEST_CODE_FILE_MULTI = 146;
+        
+              public void AndroidThunkJava_fflOpenFileDialog(Uri defaultPath, String[] mimeTypes, boolean multiSelect) {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+    
+                if (defaultPath != null) {
+                    intent.putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, defaultPath);
+                }
+    
+                if (mimeTypes != null && mimeTypes.length > 0) {
+                    intent.setType(mimeTypes[0]);
+                    intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
+                } else {
+                    intent.setType("*/*");
+                }
+    
+                if (multiSelect) {
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                }
+    
+                startActivityForResult(intent, multiSelect ? REQUEST_CODE_FILE_MULTI : REQUEST_CODE_FILE_SINGLE);
+              }
+
+            public void AndroidThunkJava_fflSaveFileDialog(String defaultFile, Uri defaultPath, String[] mimeTypes, boolean multiSelect) {
+                Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+    
+                if (defaultFile != null) {
+                    intent.putExtra(Intent.EXTRA_TITLE, defaultFile);
+                }
+    
+                if (defaultPath != null) {
+                    intent.putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, defaultPath);
+                }
+    
+                if (mimeTypes != null && mimeTypes.length > 0) {
+                    intent.setType(mimeTypes[0]);
+                    intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
+                } else {
+                    intent.setType("*/*");
+                }
+    
+                if (multiSelect) {
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                }
+    
+                startActivityForResult(intent, multiSelect ? REQUEST_CODE_FILE_MULTI : REQUEST_CODE_FILE_SINGLE);
+            }
+
+            public void AndroidThunkJava_fflOpenDirectoryDialog(Uri defaultPath, boolean multiSelect) {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+    
+                if (defaultPath != null) {
+                    intent.putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, defaultPath);
+                }
+    
+                if (multiSelect) {
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                }
+    
+                startActivityForResult(intent, multiSelect ? REQUEST_CODE_FILE_MULTI : REQUEST_CODE_FILE_SINGLE);
+            }
+
+            public native void fflHandleOnDialogResult(String path);
+            public native void fflHandleOnDialogResultMulti(String[] paths);
+            
+            ]]>
+
+        </insert>
+    </gameActivityClassAdditions>
+
+    <gameActivityOnActivityResultAdditions>
+        <insert>
+            <![CDATA[
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                if (requestCode == REQUEST_CODE_FILE_SINGLE) {
+                    // Single file selected
+                    Uri uri = data.getData();
+                    if (uri != null) {
+                        String path = uri.toString();
+                        Log.debug("[FileSystemLibrary] - Single selection");
+                        Log.debug(path);
+                        fflHandleOnDialogResult(path);
+                    }
+        
+                } else if (requestCode == REQUEST_CODE_FILE_MULTI) {
+                    // Potentially multiple files selected
+                    if (data.getClipData() != null) {
+                        ClipData clipData = data.getClipData();
+                        ArrayList<String> pathsList = new ArrayList<>();
+                        for (int i = 0; i < clipData.getItemCount(); i++) {
+                            Uri uri = clipData.getItemAt(i).getUri();
+                            if (uri != null) {
+                                String path = uri.toString();
+                                Log.debug("[FileSystemLibrary] - Multi selection item " + i);
+                                Log.debug(path);
+                                pathsList.add(path);
+                            }
+                        }
+                        if (!pathsList.isEmpty()) {
+                            fflHandleOnDialogResultMulti(pathsList.toArray(new String[0]));
+                        }
+                    } else {
+                        // If only a single item was chosen despite multi-select
+                        Uri uri = data.getData();
+                        if (uri != null) {
+                            String path = uri.toString();
+                            Log.debug("[FileSystemLibrary] - Single selection in multi-select scenario");
+                            Log.debug(path);
+                            fflHandleOnDialogResult(path);
+                        }
+                    }
+                }    
+            }
+            ]]>
+        </insert>
+    </gameActivityOnActivityResultAdditions>
+    
+</root>
